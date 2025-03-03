@@ -1,0 +1,12 @@
+.post-detail {
+  padding: 20px;
+}
+
+.post-detail h1 {
+  color: blue;
+}
+
+.post-detail p {
+  font-size: 1rem;
+  color: gray;
+}

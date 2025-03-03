@@ -1,0 +1,279 @@
+/* 기본 스타일 설정 */
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 10px;
+  padding-left: 5px;
+  padding-right: 10px;
+  background-color: #fff;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  margin-top: 2vh;
+}
+
+.header-left img {
+  width: 75px; /* 이미지 너비 설정 */
+  height: auto; /* 이미지 비율 유지 */
+}
+
+.header_sucat {
+  font-size: 2rem;
+  color: blue;
+  font-family: "Franklin Gothic Medium", "Arial Narrow", Arial, sans-serif;
+  margin-left: 10px;
+}
+
+.icons {
+  display: flex;
+  align-items: center;
+  margin-right: 10px;
+}
+
+.icons img {
+  width: 20px; /* 이미지 너비 */
+  height: auto; /* 이미지 비율 유지 */
+  margin-left: 7px;
+  margin-right: 8px;
+}
+
+.tabs {
+  display: flex;
+  justify-content: space-between; /* 탭 구분선 일정한 간격 */
+  background-color: #ffffff;
+  border-bottom: 1px solid #ddd;
+  border-top: none;
+}
+
+.tabs button {
+  flex: 1; /* 변경: 각 버튼이 동일한 너비를 가짐 */
+  background: none;
+  border: none;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 10px;
+  position: relative;
+  text-align: center; /* 텍스트 가운데 정렬 */
+} /* 탭버튼 */
+
+.tabs button.selected::after {
+  content: "";
+  display: block;
+  width: 80%;
+  height: 4px;
+  background-color: black;
+  position: absolute;
+  bottom: 0;
+  left: 10%;
+} /* 선택된 Tab의 밑줄 */
+
+.tabs button:not(:last-child) {
+  border-right: 1.5px solid #ddd;
+} /* 버튼 사이의 구분선 */
+
+.hot-post {
+  display: flex;
+  align-items: center;
+  background-color: #fff;
+  padding: 7px 12px;
+  border: 2px solid red; /* 빨간색 테두리 */
+  border-radius: 10px; /* 모서리를 둥글게 */
+  margin: 10px 0;
+  margin-right: 20px;
+  margin-left: 20px;
+  transform: translateY(8px);
+}
+
+.hot-post .hot-label {
+  color: red;
+  font-weight: bold;
+  font-size: 0.75rem;
+  margin-right: 10px;
+}
+
+.hot-post .hot-title {
+  flex: 1;
+  font-weight: normal;
+  font-size: 0.65rem;
+}
+
+.hot-post .hot-likes {
+  display: flex;
+  font-size: 0.75rem;
+  align-items: center;
+}
+
+.hot-post .hot-likes img {
+  width: 10px;
+  height: auto;
+  margin-right: 5px;
+}
+
+.posts {
+  padding: 10px;
+  overflow-y: auto;
+}
+
+.post {
+  border-bottom: 1px solid #ddd;
+  padding: 10px 0;
+  transform: translateY(-3px);
+}
+
+.post-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transform: translateX(7px);
+}
+
+.author-info {
+  display: flex;
+  align-items: center;
+}
+
+.profile-icon {
+  width: 30px; /* 프로필 아이콘 너비 */
+  height: auto; /* 프로필 아이콘 높이 */
+  border-radius: 50%;
+  margin-right: 10px;
+}
+
+.post-time {
+  color: gray;
+  font-size: 0.75rem;
+}
+
+.post-icons {
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+  transform: translate(-10px, 57px);
+}
+
+.post-icon {
+  width: 15px;
+  height: auto;
+  margin-left: 7px;
+  transform: translate(-2px);
+}
+
+.post-body {
+  padding: 10px 0;
+  transform: translateX(2%);
+}
+
+.post-title {
+  font-weight: bold;
+  font-size: 1rem;
+}
+
+.post-content {
+  color: gray;
+  font-size: 0.875rem;
+}
+
+.post-footer {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 10px;
+}
+
+.bottom-navigation {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 10px 0;
+  background-color: #fff;
+  border-top: 3px solid #ddd;
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+}
+
+.bottom-navigation button {
+  background: none;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+/* 네비게이션바 이미지 크기 조절 */
+.bottom-navigation .homebar {
+  width: 25px;
+  height: auto;
+}
+
+.bottom-navigation .studybar {
+  width: 31px;
+  height: auto;
+}
+
+.bottom-navigation .gamebar {
+  width: 70px;
+  height: auto;
+  margin-top: -10px;
+  margin-bottom: -10px;
+  transform: translate(1%, -15%);
+}
+
+.bottom-navigation .announcementbar {
+  width: 40px;
+  height: auto;
+}
+
+.bottom-navigation .mypagebar {
+  width: 24.5px;
+  height: auto;
+}
+
+.bottom-navigation button div {
+  margin-top: 5px;
+}
+
+/* 네비게이션바 텍스트크기 조절 */
+.bottom-navigation .home-text {
+  font-size: 12px;
+}
+
+.bottom-navigation .study-text {
+  font-size: 12px;
+}
+
+.bottom-navigation .game-text {
+  font-size: 18px;
+  position: absolute;
+  top: 20px;
+}
+
+.bottom-navigation .announcement-text {
+  font-size: 12px;
+}
+
+.bottom-navigation .mypage-text {
+  font-size: 12px;
+}
+
+.post-button {
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  padding: 0;
+  margin: 0;
+}
+
+.writeButton {
+  position: fixed;
+  transform: translate(82.5vw, 63vh);
+  cursor: pointer;
+  z-index: 10000; /* 가장 앞에 오도록 높은 값으로 설정 */
+}
