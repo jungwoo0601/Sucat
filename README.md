@@ -57,7 +57,7 @@
 
 | 분류 | 사용 기술 |
 |------|-----------|
-| 프론트엔드 | React, CSS, Tailwind |
+| 프론트엔드 | React, CSS |
 | 디자인 | Figma |
 | 협업 도구 | Git, GitHub, Notion, Discord |
 | 배포 | AWS S3, CloudFront |
