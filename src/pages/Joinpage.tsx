@@ -75,7 +75,7 @@ const WelcomText2 = styled.p`
   font-weight: 900;
 `;
 
-const AgreeButton = styled.button`
+const AgreeButton = styled.button<{ $checked: boolean }>`
   border: none;
   font-size: 0.8rem;
   cursor: pointer;
@@ -88,7 +88,7 @@ const AgreeButton = styled.button`
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color: ${(props) => (props.checked ? "#3f51b5" : "#d3d3d3")};
+  background-color: ${(props) => (props.$checked ? "#3f51b5" : "#d3d3d3")};
   color: white;
 `;
 
@@ -135,11 +135,11 @@ const Footer = styled.div`
   margin-top: 4vh;
 `;
 
-const NextButton = styled.button`
+const NextButton = styled.button<{ $enabled: boolean }>`
   border: none;
   font-size: 1.2rem;
   width: 100%;
-  background-color: ${(props) => (props.enabled ? "#3f51b5" : "#d3d3d3")};
+  background-color: ${(props) => (props.$enabled ? "#3f51b5" : "#d3d3d3")};
   color: white;
   text-decoration: none;
   text-align: center;
@@ -147,7 +147,7 @@ const NextButton = styled.button`
   bottom: 0;
   padding: 1.2vh;
   display: block;
-  cursor: ${(props) => (props.enabled ? "pointer" : "default")};
+  cursor: ${(props) => (props.$enabled ? "pointer" : "default")};
 `;
 
 const ModalContainer = styled(Modal)`
@@ -194,17 +194,21 @@ const CloseButton = styled.button`
   cursor: pointer;
 `;
 
+interface SignupNextResponse {
+  is_success: boolean;
+}
+
 function Joinpage() {
-  const [allChecked, setAllChecked] = useState(false);
-  const [terms, setTerms] = useState([false, false]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalTitle, setModalTitle] = useState("");
-  const [modalContent, setModalContent] = useState("");
+  const [allChecked, setAllChecked] = useState<boolean>(false);
+  const [terms, setTerms] = useState<boolean[]>([false, false]);
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [modalTitle, setModalTitle] = useState<string>("");
+  const [modalContent, setModalContent] = useState<string>("");
   const navigate = useNavigate();
 
   // Define the titles and contents for each term
-  const termTitles = ["이용약관 동의", "개인정보 수집 및 이용 동의"];
-  const termContents = [
+  const termTitles: string[] = ["이용약관 동의", "개인정보 수집 및 이용 동의"];
+  const termContents: string[] = [
     `제1조(목적) 이 약관은 업체 회사(전자상거래 사업자)가 운영하는 업체 사이버 몰(이하 “몰”이라 한다)에서 제공하는 인터넷 관련 서비스(이하 “서비스”라 한다)를 이용함에 있어 사이버 몰과 이용자의 권리․의무 및 책임사항을 규정함을 목적으로 합니다. ※「PC통신, 무선 등을 이용하는 전자상거래에 대해서도 그 성질에 반하지 않는 한 이 약관을 준용합니다.」제2조(정의)
  
   ① “몰”이란 업체 회사가 재화 또는 용역(이하 “재화 등”이라 함)을 이용자에게 제공하기 위하여 컴퓨터 등 정보통신설비를 이용하여 재화 등을 거래할 수 있도록 설정한 가상의 영업장을 말하며, 아울러 사이버몰을 운영하는 사업자의 의미로도 사용합니다.
@@ -581,13 +585,13 @@ function Joinpage() {
     setAllChecked(!allChecked);
   };
 
-  const handleCheckboxChange = (index) => {
+  const handleCheckboxChange = (index: number) => {
     const updatedTerms = terms.map((term, i) => (i === index ? !term : term));
     setTerms(updatedTerms);
     setAllChecked(updatedTerms.every((term) => term));
   };
 
-  const openModal = (index) => {
+  const openModal = (index: number) => {
     setModalTitle(termTitles[index]); // Set the title based on the index
     setModalContent(termContents[index]); // Set the content based on the index
     setIsModalOpen(true);
@@ -639,7 +643,7 @@ function Joinpage() {
         </Header>
         <WelcomeText>환영합니다!</WelcomeText>
         <WelcomText2>가입을 위해 약관에 동의가 필요합니다.</WelcomText2>
-        <AgreeButton checked={allChecked} onClick={handleAgree}>
+        <AgreeButton $checked={allChecked} onClick={handleAgree}>
           네, 모두 동의합니다
           <CatImage src="./images/SucatLogo.png" alt="cat" />
         </AgreeButton>
@@ -660,7 +664,7 @@ function Joinpage() {
           )}
         </CheckboxContainer>
         <Footer>
-          <NextButton enabled={allChecked} onClick={handleNextButtonClick}>
+          <NextButton $enabled={allChecked} onClick={handleNextButtonClick}>
             다음
           </NextButton>
         </Footer>
