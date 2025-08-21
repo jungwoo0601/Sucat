@@ -1,5 +1,10 @@
 import React from "react";
-import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Route,
+  Routes,
+  Outlet,
+} from "react-router-dom";
 import Loginpage from "./pages/Loginpage";
 import MyPage from "./pages/MyPage/MyPage";
 import Joinpage from "./pages/Joinpage";
@@ -34,19 +39,27 @@ import RestrictionInfo from "./pages/MyPage/RestrictionInfo";
 import WritingAnnouncement from "./pages/Announcement/WritingAnnouncement";
 import ReWrite from "./pages/MyPage/ReWrite";
 
+// 게임 라우트 전용 레이아웃 (여기서만 MusicProvider 적용)
+function GameLayout(): JSX.Element {
+  return (
+    <MusicProvider>
+      <Outlet />
+    </MusicProvider>
+  );
+}
+
 function App() {
   return (
     <Router>
-      <MusicProvider>
-        <Routes>
+      <Routes>
+        <Route element={<GameLayout />}>
           <Route path="/gamelist" element={<GameList />} />
           <Route path="/gamewaiting" element={<GameWaiting />} />
           <Route path="/gamewaiting2" element={<GameWaiting2 />} />
           <Route path="/gamewaiting3" element={<GameWaiting3 />} />
           <Route path="/gamewaiting4" element={<GameWaiting4 />} />
-        </Routes>
-      </MusicProvider>
-      <Routes>
+        </Route>
+
         <Route path="/" element={<Loginpage />} />
         <Route path="/mypage" element={<MyPage />} />
         <Route path="/joinpage" element={<Joinpage />} />
