@@ -1,12 +1,18 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import styled from "styled-components";
-import { Link } from "react-router-dom";
 import { RiPencilFill } from "react-icons/ri";
 
-const SERVER_URL = import.meta.env.VITE_SERVER_URL;
+const SERVER_URL = import.meta.env.VITE_SERVER_URL as string;
 
-// 스타일 컴포넌트 정의
+// ====== API 응답 타입 ======
+interface ApiBaseResponse {
+  is_success: boolean;
+  message?: string;
+  errors?: { field: string; reason: string }[];
+}
+
+// ====== 스타일 컴포넌트 ======
 const Container = styled.div`
   width: 100vw;
   height: 100vh;
@@ -230,7 +236,7 @@ const PhotoBox = styled.div`
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 18vh; /* 가로 세로 동일한 크기로 설정 */
+  width: 18vh;
   height: 18vh;
   left: 50%;
   transform: translate(-50%);
@@ -296,22 +302,23 @@ const StyledButton = styled.button`
   }
 `;
 
-// Joinpage2 컴포넌트 정의
-function Joinpage2() {
-  const [email, setEmail] = useState(""); // 이메일 입력란
-  const [emailVerified, setEmailVerified] = useState(false); // 이메일 인증
-  const [verificationCodeInput, setVerificationCodeInput] = useState(""); // 사용자가 입력한 인증번호
-  const [password, setPassword] = useState(""); // 비번 입력
-  const [passwordConfirm, setPasswordConfirm] = useState(""); // 비번 확인 입력
-  const [name, setName] = useState(""); // 이름 입력
-  const [nickname, setNickname] = useState(""); // 닉네임 입력
-  const [dupliCheck, setDupliCheck] = useState(false); // 닉네임 중복 확인
-  const [major, setMajor] = useState(""); // 학과 상태 추가
-  const [profileImage, setProfileImage] = useState(null); // 프로필 이미지 추가
-  const [previewImage, setPreviewImage] = useState(null); // 미리보기 이미지
-  const [allChecked, setAllChecked] = useState(false); // 버튼 활성화 시키는 조건
+// ====== 컴포넌트 ======
+const Joinpage2: React.FC = () => {
+  const [email, setEmail] = useState<string>(""); // 이메일 입력란
+  const [emailVerified, setEmailVerified] = useState<boolean>(false); // 이메일 인증
+  const [verificationCodeInput, setVerificationCodeInput] =
+    useState<string>(""); // 인증번호
+  const [password, setPassword] = useState<string>(""); // 비밀번호
+  const [passwordConfirm, setPasswordConfirm] = useState<string>(""); // 비번 확인
+  const [name, setName] = useState<string>(""); // 이름
+  const [nickname, setNickname] = useState<string>(""); // 닉네임
+  const [dupliCheck, setDupliCheck] = useState<boolean>(false); // 닉네임 중복확인
+  const [major, setMajor] = useState<string>(""); // 학과
+  const [profileImage, setProfileImage] = useState<File | null>(null); // 프로필 이미지
+  const [previewImage, setPreviewImage] = useState<string | null>(null); // 미리보기
+  const [allChecked, setAllChecked] = useState<boolean>(false); // 버튼 활성 여부
   const navigate = useNavigate();
-  const fileInputRef = useRef(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (
@@ -320,7 +327,7 @@ function Joinpage2() {
       password.length >= 6 &&
       name.trim() !== "" &&
       nickname.trim() !== "" &&
-      dupliCheck && // 닉네임 중복 확인이 완료되어야 함
+      dupliCheck &&
       major !== ""
     ) {
       setAllChecked(true);
@@ -333,82 +340,76 @@ function Joinpage2() {
     passwordConfirm,
     name,
     nickname,
-    dupliCheck, // 닉네임 중복 확인을 조건에 포함
+    dupliCheck,
     major,
   ]);
 
-  const handleEmailVerification = async () => {
+  const handleEmailVerification = async (): Promise<void> => {
     if (email.trim() === "") {
       alert("이메일을 입력해주세요");
-    } else {
-      const fullEmail = `${email.trim()}@suwon.ac.kr`;
+      return;
+    }
 
-      try {
-        const response = await fetch(
-          `${SERVER_URL}/api/v1/verification/email`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              email: fullEmail,
-            }),
-          }
-        );
+    const fullEmail = `${email.trim()}@suwon.ac.kr`;
 
-        const data = await response.json();
+    try {
+      const response = await fetch(`${SERVER_URL}/api/v1/verification/email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: fullEmail }),
+      });
 
-        if (data.is_success) {
-          alert("인증번호가 발송되었습니다.");
-        } else {
-          alert(`인증번호 발송 실패: ${data.message}`);
-        }
-      } catch (error) {
-        console.error("Error:", error);
-        alert("인증번호 발송 중 오류가 발생했습니다. 다시 시도해주세요.");
+      const data: ApiBaseResponse = await response.json();
+
+      if (data.is_success) {
+        alert("인증번호가 발송되었습니다.");
+      } else {
+        alert(`인증번호 발송 실패: ${data.message ?? "알 수 없는 오류"}`);
       }
+    } catch (error) {
+      console.error("Error:", error);
+      alert("인증번호 발송 중 오류가 발생했습니다. 다시 시도해주세요.");
     }
   };
 
-  const handleVerificationCodeCheck = async () => {
+  const handleVerificationCodeCheck = async (): Promise<void> => {
     const fullEmail = `${email.trim()}@suwon.ac.kr`;
 
     if (verificationCodeInput.trim() === "") {
       alert("인증번호를 입력해주세요");
-    } else {
-      try {
-        const response = await fetch(`${SERVER_URL}/api/v1/verification/code`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email: fullEmail,
-            code: verificationCodeInput.trim(),
-          }),
-        });
+      return;
+    }
 
-        const data = await response.json();
+    try {
+      const response = await fetch(`${SERVER_URL}/api/v1/verification/code`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: fullEmail,
+          code: verificationCodeInput.trim(),
+        }),
+      });
 
-        if (data.is_success) {
-          setEmailVerified(true);
-          alert("이메일 인증이 완료되었습니다.");
-        } else {
-          alert(`인증 실패: ${data.message}`);
-        }
-      } catch (error) {
-        console.error("Error:", error);
-        alert("이메일 인증 중 오류가 발생했습니다. 다시 시도해주세요.");
+      const data: ApiBaseResponse = await response.json();
+
+      if (data.is_success) {
+        setEmailVerified(true);
+        alert("이메일 인증이 완료되었습니다.");
+      } else {
+        alert(`인증 실패: ${data.message ?? "알 수 없는 오류"}`);
       }
+    } catch (error) {
+      console.error("Error:", error);
+      alert("이메일 인증 중 오류가 발생했습니다. 다시 시도해주세요.");
     }
   };
 
-  const handleNicknameCheck = async () => {
+  const handleNicknameCheck = async (): Promise<void> => {
     if (nickname.trim() === "") {
       alert("닉네임을 입력해주세요");
       return;
     }
+
     try {
       const response = await fetch(
         `${SERVER_URL}/api/v1/users/nickname/duplication?nickname=${encodeURIComponent(
@@ -416,13 +417,11 @@ function Joinpage2() {
         )}`,
         {
           method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
         }
       );
 
-      const data = await response.json();
+      const data: ApiBaseResponse = await response.json();
 
       if (data.is_success) {
         alert("닉네임 사용 가능");
@@ -437,32 +436,29 @@ function Joinpage2() {
     }
   };
 
-  const handlePhotoChange = (e) => {
-    const file = e.target.files[0];
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    const file = e.target.files?.[0];
     if (file) {
-      setProfileImage(file); // 원본 파일을 상태에 저장
-      setPreviewImage(URL.createObjectURL(file)); // 미리보기 이미지를 설정
+      setProfileImage(file);
+      setPreviewImage(URL.createObjectURL(file));
     }
   };
 
-  const handleSignup = async () => {
+  const handleSignup = async (): Promise<void> => {
     const formData = new FormData();
 
-    // JSON 데이터를 문자열로 변환하여 'request' 키에 추가
     const jsonData = JSON.stringify({
-      email: `${email.trim()}@suwon.ac.kr`, // 사용자가 입력한 이메일
-      password: password, // 사용자가 입력한 비밀번호
-      name: name, // 사용자가 입력한 이름
-      nickname: nickname, // 사용자가 입력한 닉네임
-      department: major, // 사용자가 선택한 학과
+      email: `${email.trim()}@suwon.ac.kr`,
+      password,
+      name,
+      nickname,
+      department: major,
     });
 
-    // 프로필 이미지 추가
     if (profileImage) {
-      formData.append("profileImage", profileImage); // 원본 파일을 FormData에 추가
+      formData.append("profileImage", profileImage);
     }
 
-    // JSON 데이터를 FormData에 추가
     formData.append(
       "request",
       new Blob([jsonData], { type: "application/json" })
@@ -471,23 +467,22 @@ function Joinpage2() {
     try {
       const response = await fetch(`${SERVER_URL}/api/v1/users/signup`, {
         method: "POST",
-        body: formData, // multipart/form-data으로 전송됩니다.
+        body: formData,
       });
 
-      const data = await response.json();
+      const data: ApiBaseResponse = await response.json();
       console.log(data);
 
       if (data.is_success) {
         alert("회원가입이 완료되었습니다.");
-        navigate("/"); // 회원가입이 성공하면 로그인 페이지로 이동
+        navigate("/");
       } else if (data.errors) {
-        // 서버에서 받은 오류 메시지를 처리
         const errorMessages = data.errors.map(
           (error) => `${error.field}: ${error.reason}`
         );
         alert(`회원가입 실패:\n${errorMessages.join("\n")}`);
       } else {
-        alert(`회원가입 실패: ${data.message}`);
+        alert(`회원가입 실패: ${data.message ?? "알 수 없는 오류"}`);
       }
     } catch (error) {
       console.error("Error:", error);
@@ -495,8 +490,8 @@ function Joinpage2() {
     }
   };
 
-  const handlePhotoClick = () => {
-    fileInputRef.current.click();
+  const handlePhotoClick = (): void => {
+    fileInputRef.current?.click();
   };
 
   return (
@@ -518,6 +513,7 @@ function Joinpage2() {
               <SchoolName>수원대학교</SchoolName>
             </CenterContainer>
           </FormGroup>
+
           <FormGroup>
             <Label>
               수원대 전자메일 주소(ID) <span>*</span>
@@ -529,7 +525,7 @@ function Joinpage2() {
                   placeholder="Example : xxxxx"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  disabled={emailVerified} // 이메일 인증 성공 시 입력 필드 비활성화
+                  disabled={emailVerified}
                 />
                 <EmailAuto>@ suwon.ac.kr</EmailAuto>
                 <button
@@ -556,6 +552,7 @@ function Joinpage2() {
               </div>
             </EnterEmail>
           </FormGroup>
+
           <FormGroup>
             <Label>
               비밀번호 <span>*</span>
@@ -619,6 +616,7 @@ function Joinpage2() {
               />
             </EnterName>
           </FormGroup>
+
           <FormGroup>
             <Label>
               닉네임 <span>*</span>
@@ -698,13 +696,15 @@ function Joinpage2() {
           </FormGroup>
         </Content>
       </Container>
+
       <ButtonContainer>
-        <StyledButton primary disabled={!allChecked} onClick={handleSignup}>
+        {/* primary prop은 사용하지 않아 TS에서 오류가 나므로 제거 */}
+        <StyledButton disabled={!allChecked} onClick={handleSignup}>
           회원가입 완료
         </StyledButton>
       </ButtonContainer>
     </div>
   );
-}
+};
 
 export default Joinpage2;
