@@ -1,7 +1,13 @@
+// FindPw.tsx
 import React, { useState } from "react";
 import styled from "styled-components";
-import { Link } from "react-router-dom";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+
+type ApiResponse = {
+  is_success: boolean;
+  code?: string;
+  message?: string;
+};
 
 const Container = styled.div`
   display: flex;
@@ -20,13 +26,13 @@ const Header = styled.div`
   justify-content: center;
   background-color: #003fe0;
   color: white;
-  width: 100%; /* 부모 요소 기준 */
-  max-width: 100vw; /* 가로 확장 방지 */
+  width: 100%;
+  max-width: 100vw;
   padding: 0.5vh 0;
   position: fixed;
   top: 0;
-  box-sizing: border-box; /* 패딩 포함 크기 고정 */
-  z-index: 100; /* 다른 요소 위로 배치 */
+  box-sizing: border-box;
+  z-index: 100;
 `;
 
 const BackButton = styled(Link)`
@@ -38,6 +44,7 @@ const BackButton = styled(Link)`
   color: white;
   cursor: pointer;
   text-decoration: none;
+
   img {
     width: 1.3vh;
     height: auto;
@@ -70,7 +77,7 @@ const Subtitle = styled.p`
   color: #333;
   text-align: left;
   width: 90%;
-  margin: 5vh 0 0.5vh; /* 상단 마진을 줄임 */
+  margin: 5vh 0 0.5vh;
 `;
 
 const EmailInputContainer = styled.div`
@@ -81,12 +88,6 @@ const EmailInputContainer = styled.div`
   position: relative;
   left: 3.5vw;
   margin-top: 0.5vh;
-
-  Button {
-    width: 28%;
-    position: absolute;
-    right: 5vw;
-  }
 `;
 
 const InputLabel = styled.span`
@@ -103,24 +104,24 @@ const Input = styled.input`
   width: 30%;
 `;
 
-const Button = styled.button`
+const ActionButton = styled.button`
   padding: 10px 20px;
   background-color: #cfcfcf;
   color: #000;
   border: none;
   border-radius: 5px;
-  font-size: 1rem;
+  font-size: 0.8rem;
   cursor: pointer;
   min-width: 100px;
   font-weight: bold;
-  font-size: 0.8rem;
+  margin-left: auto; /* 오른쪽 정렬 */
 `;
 
 const CodeInputContainer = styled.div`
   display: flex;
   align-items: center;
   width: 90%;
-  margin-top: 0.5vh; /* 상단 마진을 줄임 */
+  margin-top: 0.5vh;
 `;
 
 const VerificationCodeInput = styled.input`
@@ -156,12 +157,12 @@ const Footer = styled.div`
   margin-top: 4vh;
 `;
 
-const CompleteButton = styled(Link)`
+const CompleteButton = styled.button<{ $enabled: boolean }>`
   border: none;
   font-size: 2.7vh;
-  width: 100%; /* 부모 요소 기준 */
-  max-width: 100vw; /* 가로 확장 방지 */
-  background-color: ${(props) => (props.enabled ? "#3f51b5" : "#d3d3d3")};
+  width: 100%;
+  max-width: 100vw;
+  background-color: ${(props) => (props.$enabled ? "#3f51b5" : "#d3d3d3")};
   color: white;
   text-decoration: none;
   text-align: center;
@@ -170,6 +171,7 @@ const CompleteButton = styled(Link)`
   display: block;
   padding: 2vh 0;
   box-sizing: border-box;
+  cursor: pointer;
 
   @media (max-width: 1023px) {
     font-size: 2.5vh;
@@ -182,31 +184,28 @@ const CompleteButton = styled(Link)`
   }
 `;
 
-const FindPw = () => {
-  const [email, setEmail] = useState("");
-  const [verificationCode, setVerificationCode] = useState("");
-  const [serverCode, setServerCode] = useState(""); // Code from server
-  const [isVerified, setIsVerified] = useState(false);
-  const [isButtonClicked, setIsButtonClicked] = useState(false);
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPasswordFields, setShowPasswordFields] = useState(false);
+const FindPw: React.FC = () => {
+  const [email, setEmail] = useState<string>("");
+  const [verificationCode, setVerificationCode] = useState<string>("");
+  const [serverCode, setServerCode] = useState<string>("");
+  const [isVerified, setIsVerified] = useState<boolean>(false);
+  const [isButtonClicked, setIsButtonClicked] = useState<boolean>(false);
+  const [newPassword, setNewPassword] = useState<string>("");
+  const [confirmPassword, setConfirmPassword] = useState<string>("");
+  const [showPasswordFields, setShowPasswordFields] = useState<boolean>(false);
 
-  const SERVER_URL = import.meta.env.VITE_SERVER_URL; // Replace with your server URL
+  const SERVER_URL = import.meta.env.VITE_SERVER_URL as string;
 
   const navigate = useNavigate();
 
-  const handleEmailChange = (e) => {
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEmail(e.target.value);
   };
 
-  const handleCodeChange = (e) => {
-    setVerificationCode(e.target.value);
-    if (e.target.value === serverCode) {
-      setIsVerified(true);
-    } else {
-      setIsVerified(false);
-    }
+  const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setVerificationCode(val);
+    setIsVerified(val === serverCode);
   };
 
   const handleButtonClick = () => {
@@ -216,47 +215,47 @@ const FindPw = () => {
     }
   };
 
-  const handleNewPasswordChange = (e) => {
+  const handleNewPasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setNewPassword(e.target.value);
   };
 
-  const handleConfirmPasswordChange = (e) => {
+  const handleConfirmPasswordChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
     setConfirmPassword(e.target.value);
   };
 
   const isPasswordMatch =
-    newPassword && confirmPassword && newPassword === confirmPassword;
+    Boolean(newPassword) &&
+    Boolean(confirmPassword) &&
+    newPassword === confirmPassword;
 
   const handleEmailVerification = async () => {
     if (email.trim() === "") {
       alert("이메일을 입력해주세요");
-    } else {
-      const fullEmail = `${email.trim()}@suwon.ac.kr`;
+      return;
+    }
 
-      try {
-        const response = await fetch(
-          `${SERVER_URL}/api/v1/verification/email`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ email: fullEmail }),
-          }
-        );
+    const fullEmail = `${email.trim()}@suwon.ac.kr`;
 
-        const data = await response.json();
+    try {
+      const response = await fetch(`${SERVER_URL}/api/v1/verification/email`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: fullEmail }),
+      });
 
-        if (data.is_success) {
-          alert("인증번호가 발송되었습니다.");
-          setServerCode(data.code); // Set serverCode to the code from server
-        } else {
-          alert(`인증번호 발송 실패: ${data.message}`);
-        }
-      } catch (error) {
-        console.error("Error:", error);
-        alert("인증번호 발송 중 오류가 발생했습니다. 다시 시도해주세요.");
+      const data: ApiResponse = await response.json();
+
+      if (data.is_success && data.code) {
+        alert("인증번호가 발송되었습니다.");
+        setServerCode(data.code);
+      } else {
+        alert(`인증번호 발송 실패: ${data.message ?? "알 수 없는 오류"}`);
       }
+    } catch (error) {
+      console.error("Error:", error);
+      alert("인증번호 발송 중 오류가 발생했습니다. 다시 시도해주세요.");
     }
   };
 
@@ -265,32 +264,31 @@ const FindPw = () => {
 
     if (verificationCode.trim() === "") {
       alert("인증번호를 입력해주세요");
-    } else {
-      try {
-        const response = await fetch(`${SERVER_URL}/api/v1/verification/code`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            email: fullEmail,
-            code: verificationCode.trim(),
-          }),
-        });
+      return;
+    }
 
-        const data = await response.json();
+    try {
+      const response = await fetch(`${SERVER_URL}/api/v1/verification/code`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: fullEmail,
+          code: verificationCode.trim(),
+        }),
+      });
 
-        if (data.is_success) {
-          setIsVerified(true);
-          alert("이메일 인증이 완료되었습니다.");
-          setShowPasswordFields(true);
-        } else {
-          alert(`인증 실패: ${data.message}`);
-        }
-      } catch (error) {
-        console.error("Error:", error);
-        alert("이메일 인증 중 오류가 발생했습니다. 다시 시도해주세요.");
+      const data: ApiResponse = await response.json();
+
+      if (data.is_success) {
+        setIsVerified(true);
+        alert("이메일 인증이 완료되었습니다.");
+        setShowPasswordFields(true);
+      } else {
+        alert(`인증 실패: ${data.message ?? "알 수 없는 오류"}`);
       }
+    } catch (error) {
+      console.error("Error:", error);
+      alert("이메일 인증 중 오류가 발생했습니다. 다시 시도해주세요.");
     }
   };
 
@@ -301,27 +299,22 @@ const FindPw = () => {
     }
 
     const fullEmail = `${email.trim()}@suwon.ac.kr`;
-    const payload = {
-      email: fullEmail,
-      password: newPassword,
-    };
+    const payload = { email: fullEmail, password: newPassword };
 
     try {
       const response = await fetch(`${SERVER_URL}/api/v1/users/password`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
-      const data = await response.json();
+      const data: ApiResponse = await response.json();
 
       if (data.is_success) {
         alert("비밀번호가 성공적으로 변경되었습니다.");
-        navigate("/"); // 성공적으로 변경 후 페이지 이동
+        navigate("/");
       } else {
-        alert(`비밀번호 변경 실패: ${data.message}`);
+        alert(`비밀번호 변경 실패: ${data.message ?? "알 수 없는 오류"}`);
       }
     } catch (error) {
       console.error("Error:", error);
@@ -349,7 +342,7 @@ const FindPw = () => {
           onChange={handleEmailChange}
         />
         <InputLabel>@ suwon.ac.kr</InputLabel>
-        <Button onClick={handleEmailVerification}>메일 인증</Button>
+        <ActionButton onClick={handleEmailVerification}>메일 인증</ActionButton>
       </EmailInputContainer>
 
       <Subtitle>학교 이메일로 발송된 인증번호를 입력해주세요.</Subtitle>
@@ -360,7 +353,7 @@ const FindPw = () => {
           value={verificationCode}
           onChange={handleCodeChange}
         />
-        <Button onClick={handleVerificationCodeCheck}>확인</Button>
+        <ActionButton onClick={handleVerificationCodeCheck}>확인</ActionButton>
       </CodeInputContainer>
 
       {showPasswordFields && (
@@ -386,7 +379,8 @@ const FindPw = () => {
       <Footer>
         <CompleteButton
           onClick={handlePasswordChange}
-          enabled={isVerified && isPasswordMatch}
+          $enabled={isVerified && isPasswordMatch}
+          disabled={!(isVerified && isPasswordMatch)}
         >
           변경완료
         </CompleteButton>
