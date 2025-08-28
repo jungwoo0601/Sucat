@@ -1,17 +1,50 @@
-import React, { useState } from "react";
+// ChatPage.tsx
+import React, { useEffect, useRef, useState } from "react";
 import styled from "styled-components";
-import { Link } from "react-router-dom";
-import { useEffect } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
-import { useLocation } from "react-router-dom";
-
-import { useRef } from "react";
-import { Stomp } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
-const SERVER_URL = import.meta.env.VITE_SERVER_URL;
+import { Stomp, CompatClient, IMessage, IFrame } from "@stomp/stompjs";
 
-// Styled components
+const SERVER_URL = import.meta.env.VITE_SERVER_URL as string;
+
+/* ===== Types ===== */
+interface ChatUser {
+  userId: number;
+  nickname: string;
+  department?: string;
+  profileImageName?: string;
+}
+
+interface ChatRoomMessageDto {
+  messageId: number;
+  content: string;
+  senderId: number;
+  sendTime: string; // ISO string
+}
+
+interface ChatRoomOpenPayload {
+  chatRoomMessageResponseDtoList: ChatRoomMessageDto[];
+  currentUser: ChatUser;
+  receiver: ChatUser;
+}
+
+interface ChatRoomOpenResponse {
+  is_success: boolean;
+  payload: ChatRoomOpenPayload;
+}
+
+type UiMessage = {
+  messageId?: number;
+  content: string;
+  senderId: number;
+  sendTime: string;
+  isSender: boolean;
+};
+
+type LocationState = { roomId?: string };
+
+/* ===== Styled components ===== */
 const ChatContainer = styled.div`
   display: flex;
   flex-direction: column;
@@ -46,6 +79,7 @@ const Avatar = styled.img`
   height: 9vw;
   margin-left: 0vh;
   margin-right: 2vh;
+  object-fit: cover;
 `;
 
 const UserName = styled.h2`
@@ -77,10 +111,7 @@ const ChatBackgroundWrapper = styled.div`
 
 const ChatBackground = styled.div`
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   background-image: url("/images/Chat/ChatBackground.png");
   background-size: 100% 140%;
   background-repeat: no-repeat;
@@ -99,16 +130,16 @@ const MessageContainer = styled.div`
   margin-bottom: 7vh;
 `;
 
-const Message = styled.div`
+const Message = styled.div<{ $isSender: boolean }>`
   display: flex;
   align-items: center;
   margin-bottom: 1.1vh;
-  justify-content: ${(props) => (props.isSender ? "flex-end" : "flex-start")};
+  justify-content: ${(p) => (p.$isSender ? "flex-end" : "flex-start")};
 `;
 
-const MessageBubble = styled.div`
-  background-color: ${(props) => (props.isSender ? "#003FE0" : "#EAEAEA")};
-  color: ${(props) => (props.isSender ? "white" : "black")};
+const MessageBubble = styled.div<{ $isSender: boolean }>`
+  background-color: ${(p) => (p.$isSender ? "#003FE0" : "#EAEAEA")};
+  color: ${(p) => (p.$isSender ? "white" : "black")};
   font-size: 0.9rem;
   padding: 0.8rem;
   border-radius: 1rem;
@@ -167,26 +198,30 @@ const SendButton = styled.img`
   cursor: pointer;
 `;
 
-const ChatPage = () => {
-  const location = useLocation();
+/* ===== Component ===== */
+const ChatPage: React.FC = () => {
   const navigate = useNavigate();
-  const { roomId } = location.state || {};
-  const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState("");
-  const [currentUserId, setCurrentUserId] = useState(null);
-  const [currentUser, setCurrentUser] = useState(null);
-  const [receiver, setReceiver] = useState(null);
-  const messagesEndRef = useRef(null); // 새로운 ref 생성
-  const stompClient = useRef(null);
+  const location = useLocation();
+  const roomId = ((location.state as LocationState) ?? {}).roomId;
+
+  const [messages, setMessages] = useState<UiMessage[]>([]);
+  const [input, setInput] = useState<string>("");
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const [currentUser, setCurrentUser] = useState<ChatUser | null>(null);
+  const [receiver, setReceiver] = useState<ChatUser | null>(null);
+
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const stompClient = useRef<CompatClient | null>(null);
 
   useEffect(() => {
     if (!roomId) {
       console.error("Room ID is missing.");
       navigate("/friendpage");
-    } else {
-      openChatRoom(roomId);
-      connectToWebSocket(roomId);
+      return;
     }
+
+    openChatRoom(roomId);
+    connectToWebSocket(roomId);
 
     return () => {
       if (stompClient.current) {
@@ -195,43 +230,34 @@ const ChatPage = () => {
         });
       }
     };
-  }, [roomId, navigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roomId]);
 
   useEffect(() => {
-    scrollToBottom(); // 메시지가 업데이트될 때마다 호출
+    scrollToBottom();
   }, [messages]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const openChatRoom = async (roomId) => {
+  const openChatRoom = async (rid: string) => {
     try {
       const accessToken = localStorage.getItem("accessToken");
-      const response = await axios.get(
-        `${SERVER_URL}/api/v1/chatrooms/${roomId}/open?size=30`,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
+      const { data } = await axios.get<ChatRoomOpenResponse>(
+        `${SERVER_URL}/api/v1/chatrooms/${rid}/open?size=30`,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
       );
 
-      if (response.data.is_success) {
-        console.log(
-          "불러온 정보",
-          JSON.stringify(response.data.payload, null, 2)
-        );
-
+      if (data.is_success) {
         const { chatRoomMessageResponseDtoList, currentUser, receiver } =
-          response.data.payload;
+          data.payload;
 
         setCurrentUserId(currentUser.userId);
         setCurrentUser(currentUser);
         setReceiver(receiver);
 
-        // 메시지를 시간 순으로 정렬
-        const formattedMessages = chatRoomMessageResponseDtoList
+        const formatted: UiMessage[] = chatRoomMessageResponseDtoList
           .map((msg) => ({
             messageId: msg.messageId,
             content: msg.content,
@@ -239,9 +265,12 @@ const ChatPage = () => {
             sendTime: msg.sendTime,
             isSender: msg.senderId === currentUser.userId,
           }))
-          .sort((a, b) => new Date(a.sendTime) - new Date(b.sendTime)); // 시간 순으로 정렬
+          .sort(
+            (a, b) =>
+              new Date(a.sendTime).getTime() - new Date(b.sendTime).getTime()
+          );
 
-        setMessages(formattedMessages);
+        setMessages(formatted);
       } else {
         console.error("Failed to fetch chat room details.");
       }
@@ -250,59 +279,55 @@ const ChatPage = () => {
     }
   };
 
-  const connectToWebSocket = (roomId) => {
+  const connectToWebSocket = (rid: string) => {
     const socket = new SockJS(`${SERVER_URL}/stomp/chat`);
     stompClient.current = Stomp.over(socket);
+
     const accessToken = localStorage.getItem("accessToken");
-
     stompClient.current.connect(
-      {
-        Authorization: `Bearer ${accessToken}`,
-      },
-      (frame) => {
+      { Authorization: `Bearer ${accessToken}` },
+      (frame: IFrame) => {
         console.log("WebSocket 연결 성공:", frame);
-
-        stompClient.current.subscribe(`/sub/chats/${roomId}`, (message) => {
-          const newMessage = JSON.parse(message.body);
-          setMessages((prevMessages) => [
-            ...prevMessages,
-            {
-              content: newMessage.content,
-              senderId: newMessage.senderId,
-              sendTime: newMessage.sendTime,
-              isSender: newMessage.senderId === currentUserId,
-            },
-          ]);
-        });
+        stompClient.current?.subscribe(
+          `/sub/chats/${rid}`,
+          (message: IMessage) => {
+            const newMessage = JSON.parse(message.body) as {
+              content: string;
+              senderId: number;
+              sendTime: string;
+            };
+            setMessages((prev) => [
+              ...prev,
+              {
+                content: newMessage.content,
+                senderId: newMessage.senderId,
+                sendTime: newMessage.sendTime,
+                isSender: newMessage.senderId === currentUserId,
+              },
+            ]);
+          }
+        );
       },
-      (error) => {
+      (error: IFrame) => {
         console.error("WebSocket 연결 실패:", error);
       }
     );
   };
 
   const sendMessage = async () => {
-    if (input.trim() !== "" && stompClient.current) {
-      const messageData = {
-        senderId: currentUserId,
-        content: input,
-      };
+    if (!roomId || !stompClient.current) return;
+    if (input.trim() === "" || currentUserId == null) return;
 
-      const accessToken = localStorage.getItem("accessToken");
+    const accessToken = localStorage.getItem("accessToken");
+    const messageData = { senderId: currentUserId, content: input };
 
-      stompClient.current.send(
-        `/pub/chats/messages/${roomId}`,
-        {
-          Authorization: `Bearer ${accessToken}`,
-        },
-        JSON.stringify(messageData)
-      );
-
-      setInput(""); // 입력 필드 초기화
-
-      // Fetch the latest messages after sending a new message
-      await openChatRoom(roomId);
-    }
+    stompClient.current.send(
+      `/pub/chats/messages/${roomId}`,
+      { Authorization: `Bearer ${accessToken}` },
+      JSON.stringify(messageData)
+    );
+    setInput("");
+    await openChatRoom(roomId); // 최신 메시지 재조회
   };
 
   return (
@@ -325,37 +350,40 @@ const ChatPage = () => {
           </div>
         </ProfileSection>
       </Header>
+
       <ChatBackgroundWrapper>
         <ChatBackground />
       </ChatBackgroundWrapper>
+
       <MessageContainer>
-        {messages.map((message, index) => (
-          <Message key={index} isSender={message.isSender}>
+        {messages.map((message, idx) => (
+          <Message key={idx} $isSender={message.isSender}>
             {!message.isSender && (
               <Avatar
                 src={receiver?.profileImageName || "/images/defaultProfile.png"}
                 alt="Receiver Avatar"
               />
             )}
-            <MessageBubble isSender={message.isSender}>
+            <MessageBubble $isSender={message.isSender}>
               {message.content}
             </MessageBubble>
           </Message>
         ))}
         <div ref={messagesEndRef} />
       </MessageContainer>
+
       <InputContainer>
         <InputWrapper>
           <PlusButton src="/images/Chat/PlusButton.png" alt="Plus" />
           <InputField
             type="text"
             value={input}
-            onChange={(e) => setInput(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setInput(e.target.value)
+            }
             placeholder="메시지를 입력하세요"
-            onKeyPress={(e) => {
-              if (e.key === "Enter") {
-                sendMessage();
-              }
+            onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+              if (e.key === "Enter") sendMessage();
             }}
           />
           <SendButton
