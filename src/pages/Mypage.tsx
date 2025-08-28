@@ -1,9 +1,9 @@
+// MyPage.tsx
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import styled from "styled-components";
 
-const SERVER_URL = import.meta.env.VITE_SERVER_URL;
+const SERVER_URL = import.meta.env.VITE_SERVER_URL as string;
 
 const Container = styled.div`
   max-width: 100vw;
@@ -132,7 +132,7 @@ const Input = styled.input`
   height: 0;
 `;
 
-const Slider = styled.span`
+const Slider = styled.span<{ $checked: boolean }>`
   position: absolute;
   cursor: pointer;
   top: 0;
@@ -155,8 +155,8 @@ const Slider = styled.span`
     border-radius: 50%;
   }
 
-  ${(props) =>
-    props.checked &&
+  ${({ $checked }) =>
+    $checked &&
     `
     background-color: #3f51b5;
 
@@ -188,29 +188,33 @@ const ButtonRow = styled.div`
   padding: 10px;
 `;
 
-function MyPage() {
+const MyPage: React.FC = () => {
   const navigate = useNavigate();
 
-  const [friendAlert, setFriendAlert] = useState(false);
-  const [postAlert, setPostAlert] = useState(false);
-  const [rankAlert, setRankAlert] = useState(true);
-  const [publicName, setPublicName] = useState(true);
+  const [friendAlert, setFriendAlert] = useState<boolean>(false);
+  const [postAlert, setPostAlert] = useState<boolean>(false);
+  const [rankAlert, setRankAlert] = useState<boolean>(true);
+  const [publicName, setPublicName] = useState<boolean>(true);
 
   const handleLogout = async () => {
     try {
       const response = await fetch(`${SERVER_URL}/logout`, {
         method: "POST",
-        credentials: "include", // 필요한 경우 쿠키 인증을 위해 포함
+        credentials: "include",
       });
 
       if (response.ok) {
         alert("로그아웃 되었습니다.");
-        navigate("/"); // 로그아웃 후 홈으로 이동
+        navigate("/");
       } else {
         alert("로그아웃에 실패했습니다. 다시 시도해 주세요.");
       }
-    } catch (error) {
-      console.error("로그아웃 요청 중 오류:", error);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        console.error("로그아웃 요청 중 오류:", error.message);
+      } else {
+        console.error("알 수 없는 오류:", error);
+      }
       alert("로그아웃 중 오류가 발생했습니다.");
     }
   };
@@ -243,7 +247,7 @@ function MyPage() {
               checked={friendAlert}
               onChange={() => setFriendAlert(!friendAlert)}
             />
-            <Slider checked={friendAlert} />
+            <Slider $checked={friendAlert} />
           </Switch>
         </SettingRow>
         <SettingRow>
@@ -254,7 +258,7 @@ function MyPage() {
               checked={postAlert}
               onChange={() => setPostAlert(!postAlert)}
             />
-            <Slider checked={postAlert} />
+            <Slider $checked={postAlert} />
           </Switch>
         </SettingRow>
         <SettingRow>
@@ -265,7 +269,7 @@ function MyPage() {
               checked={rankAlert}
               onChange={() => setRankAlert(!rankAlert)}
             />
-            <Slider checked={rankAlert} />
+            <Slider $checked={rankAlert} />
           </Switch>
         </SettingRow>
       </Section>
@@ -279,7 +283,7 @@ function MyPage() {
               checked={publicName}
               onChange={() => setPublicName(!publicName)}
             />
-            <Slider checked={publicName} />
+            <Slider $checked={publicName} />
           </Switch>
         </SettingRow>
         <GeneralRow className="top">
@@ -288,7 +292,6 @@ function MyPage() {
           </ListName>
         </GeneralRow>
         <GeneralRow className="top">
-          <Link to="/profilepreview">내 프로필 미리</Link>
           <ListName>
             <Link to="/profilepreview">내 프로필 미리</Link>
           </ListName>
@@ -317,12 +320,12 @@ function MyPage() {
         <ButtonRow>
           <MenuButton onClick={handleLogout}>로그아웃</MenuButton>
           <MenuButton onClick={() => alert("회원탈퇴 기능")}>
-            회원탈퇴1
+            회원탈퇴
           </MenuButton>
         </ButtonRow>
       </Section>
     </Container>
   );
-}
+};
 
 export default MyPage;
