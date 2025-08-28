@@ -1,11 +1,53 @@
-import React, { useEffect, useState } from "react";
+// FriendPage.tsx
+import React, { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import axios from "axios";
-import _ from "lodash";
 
-const SERVER_URL = import.meta.env.VITE_SERVER_URL;
+const SERVER_URL = import.meta.env.VITE_SERVER_URL as string;
 
+interface Friend {
+  friendshipId: number;
+  friendEmail: string;
+  friendNickname: string;
+  department: string;
+  intro: string;
+  profileImageName: string;
+}
+
+interface MyProfileResponse {
+  is_success: boolean;
+  payload: {
+    nickname: string;
+    intro: string;
+    department: string;
+  };
+}
+
+interface FriendsListResponse {
+  status: string;
+  payload: {
+    content: Friend[];
+  };
+}
+
+interface FriendsSearchResponse {
+  status: string;
+  payload: Friend[];
+}
+
+interface ChatRoomResponse {
+  payload: string;
+  is_success?: boolean;
+  message?: string;
+}
+
+interface DeleteFriendResponse {
+  is_success: boolean;
+  message?: string;
+}
+
+// ===== Styled =====
 const ChatPageContainer = styled.div`
   font-family: Arial, sans-serif;
   background-color: white;
@@ -133,15 +175,13 @@ const ProfileSection = styled.div`
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 `;
 
-const ProfileIcon = styled.div`
+const ProfileIcon = styled.img`
   width: 50px;
   height: 50px;
   background-color: #c4c4c4;
   border-radius: 50%;
   margin-right: 10px;
-  background-image: url(${(props) => props.src});
-  background-size: cover;
-  background-position: center;
+  object-fit: cover;
 `;
 
 const ProfileInfo = styled.div`
@@ -226,38 +266,35 @@ const PointerIcon = styled.img`
   height: auto;
 `;
 
-// Modal의 배경 오버레이
+// Modal
 const ModalOverlay = styled.div`
   position: fixed;
   top: 0;
   left: 0;
   width: 100vw;
   height: 100vh;
-  background-color: rgba(0, 0, 0, 0.5); /* 어두운 배경 */
+  background-color: rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 10;
 `;
 
-// Modal 컨텐츠 박스
 const ModalContent = styled.div`
   background-color: white;
   padding: 2rem;
   border-radius: 8px;
   text-align: center;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* 그림자 효과 */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   z-index: 11;
 `;
 
-// 삭제 문구 스타일링
 const ModalText = styled.p`
-  font-size: 1rem; /* 글자 크기 */
+  font-size: 1rem;
   font-weight: bold;
   margin-bottom: 1.5rem;
 `;
 
-// 버튼 스타일링
 const ModalButton = styled.button`
   background-color: #f44336;
   color: white;
@@ -280,75 +317,69 @@ const CancelButton = styled(ModalButton)`
   }
 `;
 
-function FriendPage() {
-  const [friends, setFriends] = useState([]); // 친구 목록 상태
-  const [searchTerm, setSearchTerm] = useState(""); // 검색어 상태
-  const [loading, setLoading] = useState(false); // 로딩 상태
-  const [error, setError] = useState(null); // 에러 상태
-  const [profileName, setProfileName] = useState("");
-  const [profileIntro, setProfileIntro] = useState("");
-  const [profileDepartment, setDepartment] = useState("");
-  const [selectedFriendId, setSelectedFriendId] = useState(null); // 삭제할 친구의 ID
-  const [showDeleteModal, setShowDeleteModal] = useState(false); // 삭제 확인 모달 표시 여부
-  const [isLongPress, setIsLongPress] = useState(false); // 롱프레스 상태
+const FriendPage: React.FC = () => {
+  const [friends, setFriends] = useState<Friend[]>([]);
+  const [searchTerm, setSearchTerm] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [profileName, setProfileName] = useState<string>("");
+  const [profileIntro, setProfileIntro] = useState<string>("");
+  const [profileDepartment, setDepartment] = useState<string>("");
+  const [selectedFriendId, setSelectedFriendId] = useState<number | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
+  const [isLongPress, setIsLongPress] = useState<boolean>(false);
 
-  const navigate = useNavigate(); // useNavigate 훅 사용
-  let longPressTimer = null;
+  const navigate = useNavigate();
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // 내 프로필 정보 불러오기 API 호출
+  // 내 프로필 정보
   const fetchMyProfile = () => {
     const accessToken = localStorage.getItem("accessToken");
     setLoading(true);
     setError(null);
 
     axios
-      .get(`${SERVER_URL}/api/v1/users/myProfile`, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`, // 인증 헤더 설정
-        },
+      .get<MyProfileResponse>(`${SERVER_URL}/api/v1/users/myProfile`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
       })
-      .then((response) => {
-        if (response.data.is_success === true) {
-          setProfileName(response.data.payload.nickname);
-          setProfileIntro(response.data.payload.intro);
-          setDepartment(response.data.payload.department);
+      .then((res) => {
+        if (res.data.is_success) {
+          setProfileName(res.data.payload.nickname);
+          setProfileIntro(res.data.payload.intro);
+          setDepartment(res.data.payload.department);
         }
         setLoading(false);
       })
-      .catch((error) => {
+      .catch(() => {
         setError("내 프로필을 불러오지 못했습니다.");
         setLoading(false);
       });
   };
 
-  // 친구 목록 불러오기 API 호출
+  // 친구 목록
   const fetchFriends = () => {
     const accessToken = localStorage.getItem("accessToken");
     setLoading(true);
     setError(null);
 
     axios
-      .get(
+      .get<FriendsListResponse>(
         `${SERVER_URL}/api/v1/friends?page=0&size=20&sortKey=createdAtDesc`,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
+        { headers: { Authorization: `Bearer ${accessToken}` } }
       )
-      .then((response) => {
-        if (response.data.status === "OK") {
-          setFriends(response.data.payload.content);
+      .then((res) => {
+        if (res.data.status === "OK") {
+          setFriends(res.data.payload.content);
         }
         setLoading(false);
       })
-      .catch((error) => {
+      .catch(() => {
         setError("친구 목록을 불러오지 못했습니다.");
         setLoading(false);
       });
   };
 
-  // 친구 검색 함수
+  // 검색
   const searchFriends = () => {
     const accessToken = localStorage.getItem("accessToken");
     setLoading(true);
@@ -360,67 +391,61 @@ function FriendPage() {
       )}&sortKey=name`;
 
       axios
-        .get(url, {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
+        .get<FriendsSearchResponse>(url, {
+          headers: { Authorization: `Bearer ${accessToken}` },
         })
-        .then((response) => {
-          if (response.data.status === "OK") {
-            setFriends(response.data.payload); // 검색 결과로 friends 상태 업데이트
-          } else {
-            console.log("친구 검색 실패:", response.data);
+        .then((res) => {
+          if (res.data.status === "OK") {
+            setFriends(res.data.payload);
           }
           setLoading(false);
         })
-        .catch((error) => {
-          console.error("친구 검색 실패:", error);
+        .catch(() => {
           setError("친구 검색에 실패했습니다.");
           setLoading(false);
         });
     } else {
-      fetchFriends(); // 검색어가 없을 경우 모든 친구 목록을 다시 불러옴
+      fetchFriends();
     }
   };
 
-  const createOrGetChatRoom = (friendEmail) => {
+  // 채팅방 생성/가져오기
+  const createOrGetChatRoom = (friendEmail: string) => {
     const accessToken = localStorage.getItem("accessToken");
 
     axios
-      .post(
+      .post<ChatRoomResponse>(
         `${SERVER_URL}/api/v1/chats/${friendEmail}`,
         {},
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
+        { headers: { Authorization: `Bearer ${accessToken}` } }
       )
-      .then((response) => {
-        const roomId = response.data.payload.split("/").slice(-2, -1)[0]; // roomId 추출
-        navigate("/chatpage", {
-          state: { roomId },
-        });
+      .then((res) => {
+        const roomPath = res.data.payload;
+        const parts = roomPath.split("/").filter(Boolean);
+        // 마지막에서 두 번째가 roomId라는 기존 로직 유지
+        const roomId = parts.length >= 2 ? parts[parts.length - 2] : "";
+        navigate("/chatpage", { state: { roomId } });
       })
       .catch((error) => {
         console.error("채팅방 생성/가져오기 실패:", error);
       });
   };
 
-  // 친구 삭제 함수
+  // 친구 삭제
   const handleDeleteFriend = () => {
+    if (selectedFriendId == null) return;
     const accessToken = localStorage.getItem("accessToken");
+
     axios
-      .delete(`${SERVER_URL}/api/v1/friends/${selectedFriendId}`, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      })
-      .then((response) => {
-        if (response.data.is_success) {
-          fetchFriends(); // 친구 목록 다시 불러오기
+      .delete<DeleteFriendResponse>(
+        `${SERVER_URL}/api/v1/friends/${selectedFriendId}`,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      )
+      .then((res) => {
+        if (res.data.is_success) {
+          fetchFriends();
         }
-        setIsLongPress(false); // 모달 닫기
+        setIsLongPress(false);
       })
       .catch(() => {
         alert("친구 삭제 오류가 발생했습니다.");
@@ -428,30 +453,33 @@ function FriendPage() {
   };
 
   // 롱프레스 시작
-  const handleTouchStart = (friendId) => {
-    longPressTimer = setTimeout(() => {
+  const handleTouchStart = (friendId: number) => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+    }
+    longPressTimerRef.current = setTimeout(() => {
       setSelectedFriendId(friendId);
       setIsLongPress(true);
-    }, 800); // 800ms 이상 꾹 누르면 롱프레스 동작
+    }, 800);
   };
 
   // 롱프레스 끝
   const handleTouchEnd = () => {
-    if (longPressTimer) {
-      clearTimeout(longPressTimer); // 타이머 해제
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
     }
   };
 
   useEffect(() => {
-    fetchMyProfile(); // 페이지가 열리자마자 프로필 정보 불러오기
-    fetchFriends(); // 친구 목록 불러오기
-  }, []); // 빈 배열을 주어 컴포넌트가 처음 마운트될 때만 실행됨
+    fetchMyProfile();
+    fetchFriends();
+  }, []);
 
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
       searchFriends();
     }, 500);
-
     return () => clearTimeout(delayDebounceFn);
   }, [searchTerm]);
 
@@ -472,7 +500,9 @@ function FriendPage() {
             type="text"
             placeholder="Search"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)} // 검색어 상태 업데이트
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setSearchTerm(e.target.value)
+            }
           />
         </SearchContainer>
 
@@ -486,15 +516,12 @@ function FriendPage() {
       </Header>
 
       <ProfileSection>
-        <ProfileIcon src="/images/myprofile.png" />
+        <ProfileIcon src="/images/myprofile.png" alt="My Profile" />
         <ProfileInfo>
-          <ProfileName>{profileName}</ProfileName>{" "}
-          {/* 프로필 이름을 상태에서 렌더링 */}
-          <ProfileStatus>{profileDepartment}</ProfileStatus>{" "}
-          {/* 프로필 상태 메시지를 상태에서 렌더링 */}
+          <ProfileName>{profileName}</ProfileName>
+          <ProfileStatus>{profileDepartment}</ProfileStatus>
         </ProfileInfo>
-        <ProfileStatusMsg>{profileIntro}</ProfileStatusMsg>{" "}
-        {/* 하드코딩된 상태 메시지 */}
+        <ProfileStatusMsg>{profileIntro}</ProfileStatusMsg>
       </ProfileSection>
 
       <FriendsSection>
@@ -508,9 +535,9 @@ function FriendPage() {
             {friends.map((friend) => (
               <FriendItem
                 key={friend.friendshipId}
-                onClick={() => createOrGetChatRoom(friend.friendEmail)} // 친구 클릭 시 채팅방 생성/가져오기 함수 호출
-                onTouchStart={() => handleTouchStart(friend.friendshipId)} // 터치 시작
-                onTouchEnd={handleTouchEnd} // 터치 종료
+                onClick={() => createOrGetChatRoom(friend.friendEmail)}
+                onTouchStart={() => handleTouchStart(friend.friendshipId)}
+                onTouchEnd={handleTouchEnd}
               >
                 <ProfileIcon
                   src={`${SERVER_URL}/images/${friend.profileImageName}`}
@@ -531,6 +558,7 @@ function FriendPage() {
           <h2>친구가 없네요. 친구를 검색하여 추가해보세요!</h2>
         )}
       </FriendsSection>
+
       {isLongPress && (
         <ModalOverlay>
           <ModalContent>
@@ -546,6 +574,6 @@ function FriendPage() {
       )}
     </ChatPageContainer>
   );
-}
+};
 
 export default FriendPage;
