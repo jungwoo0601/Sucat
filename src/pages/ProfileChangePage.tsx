@@ -1,8 +1,9 @@
+// ProfileChangePage.tsx
 import React, { useState, useEffect } from "react";
 import styled from "styled-components";
 import { useNavigate } from "react-router-dom";
 
-const SERVER_URL = import.meta.env.VITE_SERVER_URL;
+const SERVER_URL = import.meta.env.VITE_SERVER_URL as string;
 
 const Container = styled.div`
   max-width: 100vw;
@@ -105,12 +106,13 @@ const ProfileImage = styled.div`
   cursor: pointer;
 `;
 
-const BackgroundImage = styled.div`
+const BackgroundImage = styled.div<{ $imageUrl: string | null }>`
   width: 90%;
   max-width: 600px;
   height: 550px;
   background-color: #ccc;
-  background-image: url(${(props) => props.imageUrl});
+  background-image: ${({ $imageUrl }) =>
+    $imageUrl ? `url(${$imageUrl})` : "none"};
   background-size: cover;
   background-position: center;
   display: flex;
@@ -128,37 +130,38 @@ const Footer = styled.div`
 `;
 
 const FooterButton = styled.button`
-  background-color: #f0f0f0; /* 약간의 회색 */
+  background-color: #f0f0f0;
   border: none;
   color: #3f51b5;
   cursor: pointer;
-  width: 40%; /* '이전' 버튼의 너비 */
+  width: 40%;
   padding: 10px;
   transition: background-color 0.3s;
 
   &:hover {
-    background-color: #e0e0e0; /* 약간 더 진한 회색 */
+    background-color: #e0e0e0;
   }
 `;
 
 const SaveButton = styled(FooterButton)`
   background-color: #3f51b5;
   color: white;
-  width: 60%; /* '정보 저장하기' 버튼의 너비 */
+  width: 60%;
 
   &:hover {
-    background-color: #2e3b8e; /* 저장 버튼에 호버 시 색상 변경 */
+    background-color: #2e3b8e;
   }
 `;
 
-const ProfileChangePage = () => {
+const ProfileChangePage: React.FC = () => {
   const navigate = useNavigate();
-  const [nickname, setNickname] = useState("");
-  const [intro, setIntro] = useState("");
-  const [profileImage, setProfileImage] = useState(null);
-  const [backgroundImage, setBackgroundImage] = useState(null);
 
-  // 기존 프로필 데이터를 가져오는 함수
+  const [nickname, setNickname] = useState<string>("");
+  const [intro, setIntro] = useState<string>("");
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
+
+  // 기존 프로필 데이터 가져오기
   useEffect(() => {
     const fetchProfileData = async () => {
       try {
@@ -168,8 +171,10 @@ const ProfileChangePage = () => {
         setIntro(data.intro);
         setProfileImage(data.profileImage);
         setBackgroundImage(data.backgroundImage);
-      } catch (error) {
-        console.error("Error fetching profile data:", error);
+      } catch (error: unknown) {
+        if (error instanceof Error) {
+          console.error("Error fetching profile data:", error.message);
+        }
       }
     };
 
@@ -180,9 +185,7 @@ const ProfileChangePage = () => {
     try {
       const response = await fetch(`${SERVER_URL}/api/check-nickname`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ nickname }),
       });
       const result = await response.json();
@@ -191,19 +194,29 @@ const ProfileChangePage = () => {
       } else {
         alert("사용 가능한 닉네임입니다.");
       }
-    } catch (error) {
-      console.error("Error checking nickname:", error);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        console.error("Error checking nickname:", error.message);
+      }
     }
   };
 
-  const handleProfileImageChange = (event) => {
-    const file = event.target.files[0];
-    setProfileImage(URL.createObjectURL(file));
+  const handleProfileImageChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setProfileImage(URL.createObjectURL(file));
+    }
   };
 
-  const handleBackgroundImageChange = (event) => {
-    const file = event.target.files[0];
-    setBackgroundImage(URL.createObjectURL(file));
+  const handleBackgroundImageChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setBackgroundImage(URL.createObjectURL(file));
+    }
   };
 
   const handleSave = async () => {
@@ -228,8 +241,10 @@ const ProfileChangePage = () => {
       } else {
         alert("저장 중 오류가 발생했습니다.");
       }
-    } catch (error) {
-      console.error("Error saving profile:", error);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        console.error("Error saving profile:", error.message);
+      }
     }
   };
 
@@ -248,7 +263,9 @@ const ProfileChangePage = () => {
               type="text"
               placeholder="닉네임 입력"
               value={nickname}
-              onChange={(e) => setNickname(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setNickname(e.target.value)
+              }
             />
             <Button onClick={checkNickname}>중복 확인하기</Button>
           </InputWrapper>
@@ -264,13 +281,17 @@ const ProfileChangePage = () => {
               type="text"
               placeholder="한줄소개 입력"
               value={intro}
-              onChange={(e) => setIntro(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setIntro(e.target.value)
+              }
             />
           </InputWrapper>
         </InputGroup>
         <ProfileSection>
           <ProfileImage
-            onClick={() => document.getElementById("profileImageInput").click()}
+            onClick={() =>
+              document.getElementById("profileImageInput")?.click()
+            }
           >
             {profileImage ? (
               <img
@@ -292,16 +313,18 @@ const ProfileChangePage = () => {
             onChange={handleProfileImageChange}
           />
           <Button
-            onClick={() => document.getElementById("profileImageInput").click()}
+            onClick={() =>
+              document.getElementById("profileImageInput")?.click()
+            }
           >
             프로필 사진 변경하기
           </Button>
         </ProfileSection>
         <ProfileSection>
           <BackgroundImage
-            imageUrl={backgroundImage}
+            $imageUrl={backgroundImage}
             onClick={() =>
-              document.getElementById("backgroundImageInput").click()
+              document.getElementById("backgroundImageInput")?.click()
             }
           />
           <input
@@ -313,7 +336,7 @@ const ProfileChangePage = () => {
           />
           <Button
             onClick={() =>
-              document.getElementById("backgroundImageInput").click()
+              document.getElementById("backgroundImageInput")?.click()
             }
           >
             배경사진 변경하기
