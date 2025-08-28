@@ -1,10 +1,18 @@
+// Notification.tsx
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import styled from "styled-components";
 
-const BASE_URL = import.meta.env.VITE_SERVER_URL;
+const BASE_URL = import.meta.env.VITE_SERVER_URL as string;
 
-// Styled-components
+/* ===== Types ===== */
+interface NotificationItemData {
+  notifyType: "board" | "friend" | string; // 서버에서 오는 값에 따라 확장 가능
+  content: string;
+  createdAt: string; // ISO 날짜 문자열
+}
+
+/* ===== Styled-components ===== */
 const Container = styled.div`
   max-width: 400px;
   margin: 0 auto;
@@ -56,11 +64,12 @@ const NotificationItem = styled.div`
   border-bottom: 1px solid #d3d3d3;
 `;
 
-const Icon = styled.div`
+// ✅ transient prop으로 $type 사용 → DOM에 전달되지 않음
+const Icon = styled.div<{ $type: string }>`
   width: 30px;
   height: 30px;
-  background-image: ${({ type }) =>
-    type === "board"
+  background-image: ${({ $type }) =>
+    $type === "board"
       ? "url(https://image.flaticon.com/icons/png/512/889/889140.png)"
       : "url(https://image.flaticon.com/icons/png/512/1077/1077114.png)"};
   background-size: cover;
@@ -80,50 +89,51 @@ const NotificationTime = styled.span`
   color: #888;
 `;
 
-function Notification() {
+/* ===== Component ===== */
+const Notification: React.FC = () => {
   const navigate = useNavigate();
-  const [notifications, setNotifications] = useState([]);
+  const [notifications, setNotifications] = useState<NotificationItemData[]>(
+    []
+  );
 
   useEffect(() => {
-    // API에서 알림 목록을 가져오는 함수
+    // 알림 목록 가져오기
     const fetchNotifications = async () => {
       try {
-        const accessToken = localStorage.getItem("accessToken"); // 토큰을 로컬스토리지에서 가져옴
+        const accessToken = localStorage.getItem("accessToken");
         const response = await fetch(`${BASE_URL}`, {
           headers: {
-            Authorization: `Bearer ${accessToken}`, // Authorization 헤더로 토큰 전달
+            Authorization: `Bearer ${accessToken}`,
           },
         });
         const data = await response.json();
         if (data.is_success) {
-          setNotifications(data.payload); // 성공 시 알림 목록을 상태로 설정
+          setNotifications(data.payload as NotificationItemData[]);
         }
-      } catch (error) {
-        console.error("알림 목록을 불러오는 중 오류 발생:", error);
+      } catch (error: unknown) {
+        if (error instanceof Error) {
+          console.error("알림 목록을 불러오는 중 오류 발생:", error.message);
+        } else {
+          console.error("알림 목록을 불러오는 중 알 수 없는 오류:", error);
+        }
       }
     };
 
-    // SSE로 실시간 알림 구독 설정
-    const eventSource = new EventSource(`${BASE_URL}/subscribe`, {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-      },
-    });
+    fetchNotifications();
 
-    eventSource.onmessage = (event) => {
-      const newNotification = JSON.parse(event.data);
-      setNotifications((prevNotifications) => [
-        ...prevNotifications,
-        newNotification,
-      ]);
+    // SSE (서버발송이벤트) 연결
+    const eventSource = new EventSource(`${BASE_URL}/subscribe`);
+
+    eventSource.onmessage = (event: MessageEvent) => {
+      const newNotification = JSON.parse(event.data) as NotificationItemData;
+      setNotifications((prev) => [...prev, newNotification]);
     };
 
-    eventSource.onerror = (error) => {
+    eventSource.onerror = (error: Event) => {
       console.error("SSE 연결 중 오류 발생:", error);
-      eventSource.close(); // 오류가 발생하면 연결 종료
+      eventSource.close();
     };
 
-    // 컴포넌트 언마운트 시 SSE 연결 종료
     return () => {
       eventSource.close();
     };
@@ -140,7 +150,7 @@ function Notification() {
       <Notifications>
         {notifications.map((notification, index) => (
           <NotificationItem key={index}>
-            <Icon type={notification.notifyType} />
+            <Icon $type={notification.notifyType} />
             <TextContainer>
               <NotificationText>{notification.content}</NotificationText>
               <NotificationTime>
@@ -152,6 +162,6 @@ function Notification() {
       </Notifications>
     </Container>
   );
-}
+};
 
 export default Notification;
