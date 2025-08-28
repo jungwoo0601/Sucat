@@ -1,11 +1,10 @@
-import React from "react";
+// Loginpage.tsx
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import styled from "styled-components";
-import { useState } from "react";
 
-const SERVER_URL = import.meta.env.VITE_SERVER_URL;
+const SERVER_URL = import.meta.env.VITE_SERVER_URL as string;
 
-// Styled components
 const Container = styled.div`
   margin: 0;
   padding: 0;
@@ -164,7 +163,7 @@ const Divider = styled.span`
   }
 `;
 
-const Loginpage = () => {
+const Loginpage: React.FC = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
@@ -172,17 +171,12 @@ const Loginpage = () => {
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    const loginData = {
-      email,
-      password,
-    };
+    const loginData = { email, password };
 
     try {
       const response = await fetch(`${SERVER_URL}/login`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(loginData),
       });
 
@@ -193,16 +187,18 @@ const Loginpage = () => {
       console.log("Access Token:", accessToken);
 
       if (accessToken) {
-        // 토큰을 로컬스토리지 또는 쿠키에 저장
         localStorage.setItem("accessToken", accessToken);
-
         alert("로그인 성공!");
-        navigate("/home"); // 로그인 성공 시 "/home"으로 이동
+        navigate("/home");
       } else {
         alert("로그인 실패: 토큰이 발급되지 않았습니다.");
       }
-    } catch (error) {
-      console.error("로그인 중 오류 발생:", error);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        console.error("로그인 중 오류 발생:", error.message);
+      } else {
+        console.error("알 수 없는 오류 발생:", error);
+      }
       alert("로그인 중 오류가 발생했습니다. 다시 시도해주세요.");
     }
   };
