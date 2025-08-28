@@ -5,14 +5,12 @@ import styled from "styled-components";
 
 const BASE_URL = import.meta.env.VITE_SERVER_URL as string;
 
-/* ===== Types ===== */
 interface NotificationItemData {
   notifyType: "board" | "friend" | string; // 서버에서 오는 값에 따라 확장 가능
   content: string;
   createdAt: string; // ISO 날짜 문자열
 }
 
-/* ===== Styled-components ===== */
 const Container = styled.div`
   max-width: 400px;
   margin: 0 auto;
@@ -64,7 +62,6 @@ const NotificationItem = styled.div`
   border-bottom: 1px solid #d3d3d3;
 `;
 
-// ✅ transient prop으로 $type 사용 → DOM에 전달되지 않음
 const Icon = styled.div<{ $type: string }>`
   width: 30px;
   height: 30px;
@@ -89,7 +86,6 @@ const NotificationTime = styled.span`
   color: #888;
 `;
 
-/* ===== Component ===== */
 const Notification: React.FC = () => {
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState<NotificationItemData[]>(
