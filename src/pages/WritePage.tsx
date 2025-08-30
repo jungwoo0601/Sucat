@@ -1,26 +1,36 @@
+// WritePage.tsx
 import React, { useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import styled from "styled-components";
 
-const SERVER_URL = import.meta.env.VITE_SERVER_URL;
+const SERVER_URL = import.meta.env.VITE_SERVER_URL as string;
 
+/* ===== Styled-components ===== */
 const Container = styled.div`
   max-width: 100%;
   margin: 0 auto;
   height: 100vh;
   background-color: white;
-  padding: 15px 20px; /* 좌우 패딩만 적용 */
+  padding: 15px 20px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
   font-family: "Arial, sans-serif";
   display: flex;
   flex-direction: column;
+  overflow-y: scroll;
+  overflow-x: hidden;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 `;
 
 const Header = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px; /* Margin을 줄여 균형 맞추기 */
+  margin-bottom: 10px;
 `;
 
 const BackButton = styled.button`
@@ -83,11 +93,11 @@ const TextArea = styled.textarea`
   margin-bottom: 10px;
   resize: none;
   flex-grow: 1;
-  height: 200px; /* 적절한 높이 설정 */
+  height: 200px;
 `;
 
 const CarouselContainer = styled.div`
-  margin-top: auto; /* 화면 하단으로 밀어내기 위해 사용 */
+  margin-top: auto;
   background-color: #f8f8f8;
   padding: 10px;
   border-radius: 10px;
@@ -115,13 +125,13 @@ const TabsContainer = styled.div`
 `;
 
 const TabButton = styled.button`
-  flex: 1; /* 버튼이 동일한 너비를 가지게 함 */
+  flex: 1;
   background: none;
   border: none;
   font-size: 12px;
   cursor: pointer;
   padding: 10px;
-  text-align: center; /* 텍스트 가운데 정렬 */
+  text-align: center;
   position: relative;
 
   &.selected::after {
@@ -136,28 +146,29 @@ const TabButton = styled.button`
   }
 
   &:not(:last-child) {
-    border-right: 1.5px solid #ddd; /* 버튼 사이의 구분선 */
+    border-right: 1.5px solid #ddd;
   }
 `;
 
-const WritePage = () => {
-  const fileInputRef = useRef(null);
-  const [selectedImages, setSelectedImages] = useState([]);
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
+/* ===== Component ===== */
+const WritePage: React.FC = () => {
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [selectedImages, setSelectedImages] = useState<string[]>([]);
+  const [title, setTitle] = useState<string>("");
+  const [content, setContent] = useState<string>("");
   const navigate = useNavigate();
-  const location = useLocation(); // 라우터에서 전달된 state를 가져옵니다.
-  const [selected, setSelected] = useState(
-    location.state?.selectedTab || "자유게시판"
+  const location = useLocation();
+  const [selected, setSelected] = useState<string>(
+    (location.state as { selectedTab?: string })?.selectedTab || "자유게시판"
   );
-  const [isPosting, setIsPosting] = useState(false);
+  const [isPosting, setIsPosting] = useState<boolean>(false);
 
   const handleIconClick = () => {
-    fileInputRef.current.click();
+    fileInputRef.current?.click();
   };
 
-  const handleFileChange = (event) => {
-    const files = Array.from(event.target.files);
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files ? Array.from(event.target.files) : [];
     const imageUrls = files.map((file) => URL.createObjectURL(file));
     setSelectedImages((prevImages) =>
       [...prevImages, ...imageUrls].slice(0, 6)
@@ -169,31 +180,29 @@ const WritePage = () => {
       alert("제목과 내용을 모두 입력해주세요.");
       return;
     }
+
     const formData = new FormData();
 
     let category = "FREE";
     if (selected === "비밀게시판") category = "PRIVATE";
     else if (selected === "중고장터") category = "MARKET";
 
-    const jsonData = JSON.stringify({
-      title,
-      content,
-      category,
-    });
+    const jsonData = JSON.stringify({ title, content, category });
     formData.append(
       "request",
       new Blob([jsonData], { type: "application/json" })
     );
 
-    const fileInputs = fileInputRef.current.files;
-    if (fileInputs.length > 0) {
+    const fileInputs = fileInputRef.current?.files;
+    if (fileInputs && fileInputs.length > 0) {
       for (let i = 0; i < fileInputs.length; i++) {
-        formData.append("images", fileInputs[i]); // 이미지 파일을 FormData에 추가
+        formData.append("images", fileInputs[i]);
       }
     }
 
     try {
       const accessToken = localStorage.getItem("accessToken");
+      setIsPosting(true);
 
       const response = await fetch(`${SERVER_URL}/api/v1/boards`, {
         method: "POST",
@@ -210,9 +219,15 @@ const WritePage = () => {
       } else {
         alert("업로드에 실패했습니다: " + result.message);
       }
-    } catch (error) {
-      console.error("Error uploading data:", error);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        console.error("Error uploading data:", error.message);
+      } else {
+        console.error("Unknown error uploading data:", error);
+      }
       alert("업로드 중 오류가 발생했습니다.");
+    } finally {
+      setIsPosting(false);
     }
   };
 
@@ -240,8 +255,12 @@ const WritePage = () => {
     <Container>
       <Header>
         <BackButton onClick={goback}>◀︎ 글 쓰기</BackButton>
-        <PostButton type="button" onClick={handlePostClick}>
-          게시하기
+        <PostButton
+          type="button"
+          onClick={handlePostClick}
+          disabled={isPosting}
+        >
+          {isPosting ? "업로드 중..." : "게시하기"}
         </PostButton>
       </Header>
       <Tabs />
@@ -251,7 +270,9 @@ const WritePage = () => {
             type="text"
             placeholder="제목을 입력해주세요"
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setTitle(e.target.value)
+            }
           />
           <IconButton type="button" onClick={handleIconClick}>
             +📷
@@ -265,11 +286,13 @@ const WritePage = () => {
           />
         </InputGroup>
         <TextArea
-          rows="5"
+          rows={5}
           placeholder="여기에 글을 써주세요"
           value={content}
-          onChange={(e) => setContent(e.target.value)}
-        ></TextArea>
+          onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+            setContent(e.target.value)
+          }
+        />
       </Form>
       <CarouselContainer>
         <Carousel>
